@@ -19,19 +19,28 @@ var redisClient *redistimeseries.Client
 
 // https://github.com/RedisTimeSeries/RedisTimeSeries
 // https://github.com/RedisTimeSeries/redistimeseries-go/
-func dataInsert(deviceID string, dataPoint float64) {
+func dataInsert(dataType pb.ECGPacket_DataType, deviceID string, dataPoint float64, timestamp uint64) {
 	_, haveIt := redisClient.Info(deviceID)
 	if haveIt != nil {
 		redisClient.CreateKeyWithOptions(deviceID, redistimeseries.DefaultCreateOptions)
 		redisClient.CreateKeyWithOptions(deviceID+"_avg", redistimeseries.DefaultCreateOptions)
+		redisClient.CreateKeyWithOptions(deviceID+"_temp", redistimeseries.DefaultCreateOptions)
 		redisClient.CreateRule(deviceID, redistimeseries.AvgAggregation, 60, deviceID+"_avg")
 	}
-	// Add sample with timestamp from server time and value 100
-	// TS.ADD mytest * 100
-	_, err := redisClient.AddAutoTs(deviceID, dataPoint)
-	if err != nil {
-		fmt.Println("Error:", err)
+
+	if dataType == pb.ECGPacket_RRI {
+		_, err := redisClient.Add(deviceID, int64(timestamp), dataPoint)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+	} else {
+		//right now the default alternative is temp
+		_, err := redisClient.Add(deviceID+"_temp", int64(timestamp), dataPoint)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
 	}
+
 	fmt.Println("Insert data successfully.")
 }
 
@@ -41,7 +50,12 @@ type JsonData struct {
 
 func dataQuery(deviceID string, endTime int64) []redistimeseries.DataPoint {
 	var hour24 int64 = 86400000
-	dataPoints, _ := redisClient.RangeWithOptions(deviceID, endTime-hour24, endTime, redistimeseries.DefaultRangeOptions)
+	var ecgOptions = redistimeseries.RangeOptions{
+		AggType:    "",
+		TimeBucket: -1,
+		Count:      200,
+	}
+	dataPoints, _ := redisClient.ReverseRangeWithOptions(deviceID, endTime-hour24, endTime, ecgOptions)
 	return dataPoints
 }
 
@@ -94,10 +108,8 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	if err := proto.Unmarshal(msg.Payload(), packet); err != nil {
 		log.Fatalln("Failed to parse address book:", err)
 	}
-	fmt.Println(packet)
-	if packet.DataType == pb.ECGPacket_RRI {
-		dataInsert(packet.DeviceId, float64(packet.Value))
-	}
+
+	dataInsert(packet.DataType, packet.DeviceId, float64(packet.Value), packet.Time)
 }
 
 func main() {
