@@ -55,7 +55,7 @@ func dataQuery(deviceID string, endTime int64) []redistimeseries.DataPoint {
 		TimeBucket: -1,
 		Count:      200,
 	}
-	dataPoints, _ := redisClient.ReverseRangeWithOptions(deviceID, endTime-hour24, endTime, ecgOptions)
+	dataPoints, _ := redisClient.RangeWithOptions(deviceID, endTime-hour24, endTime, ecgOptions)
 	return dataPoints
 }
 
