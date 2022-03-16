@@ -48,24 +48,42 @@ type JsonData struct {
 	dp []redistimeseries.DataPoint
 }
 
-func dataQuery(deviceID string, endTime int64) []redistimeseries.DataPoint {
-	var hour24 int64 = 86400000
+func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
+}
+
+func dataQuery(datatype string, deviceID string, endTime int64) []redistimeseries.DataPoint {
+	//var hour24 int64 = 86400000
 	var ecgOptions = redistimeseries.RangeOptions{
 		AggType:    "",
 		TimeBucket: -1,
-		Count:      200,
+		Count:      5,
 	}
-	dataPoints, _ := redisClient.RangeWithOptions(deviceID, endTime-hour24, endTime, ecgOptions)
-	return dataPoints
+	var dataPoints []redistimeseries.DataPoint
+	if datatype == "ECG" {
+		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID, 0, endTime, ecgOptions)
+	} else {
+		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID+"_temp", 0, endTime, ecgOptions)
+	}
+
+	return reverseDataPoint(dataPoints)
 }
 
-var httpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
-	//io.WriteString(w, "Hello, world!\n")
+func corsHeaderSet(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
 
-	var deviceID string
+func parseQueryURL(req *http.Request) (string, int64) {
+	deviceID := ""
 	var endTime int64
 	for k, v := range req.URL.Query() {
-		fmt.Printf("%s: %s\n", k, v)
 		if k == "deviceId" {
 			deviceID = v[0]
 			continue
@@ -75,19 +93,10 @@ var httpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
 			continue
 		}
 	}
+	return deviceID, endTime
+}
 
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	type User struct {
-		Id      string
-		Balance uint64
-	}
-	//u := User{Id: "US123", Balance: 8}
-	data := dataQuery(deviceID, endTime)
-
+func writeBackJsonPayload(w http.ResponseWriter, data []redistimeseries.DataPoint) {
 	js := JsonData{}
 	counter := 1
 	for _, v := range data {
@@ -97,13 +106,30 @@ var httpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
 		}
 		counter++
 	}
-
 	json.NewEncoder(w).Encode(js.dp)
 }
 
+var tempHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
+	deviceID, endTime := parseQueryURL(req)
+
+	corsHeaderSet(w)
+
+	data := dataQuery("TEMP", deviceID, endTime)
+
+	writeBackJsonPayload(w, data)
+}
+
+var ecgHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
+	deviceID, endTime := parseQueryURL(req)
+
+	corsHeaderSet(w)
+
+	data := dataQuery("ECG", deviceID, endTime)
+
+	writeBackJsonPayload(w, data)
+}
+
 var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	//fmt.Printf("TOPIC: %s\n", msg.Topic())
-	//fmt.Printf("MSG: %s\n", msg.Payload()).
 	packet := &pb.ECGPacket{}
 	if err := proto.Unmarshal(msg.Payload(), packet); err != nil {
 		log.Fatalln("Failed to parse address book:", err)
@@ -138,8 +164,13 @@ func main() {
 
 	redisClient = redistimeseries.NewClient("172.24.41.85:6379", "nohelp", nil)
 
-	// http://0.0.0.0:8888/graph?deviceId=ED5A782825AB&endTime=1646945822002
-	http.HandleFunc("/graph", httpQueryHandler)
-	log.Println("Listing for requests at http://0.0.0.0:8000/graph")
+	// http://0.0.0.0:8888/ecg?deviceId=ED5A782825AB&endTime=1646945822002
+	http.HandleFunc("/RRI", ecgHttpQueryHandler)
+
+	http.HandleFunc("/TEMP", tempHttpQueryHandler)
+
+	log.Println("Listing for requests at http://0.0.0.0:8000/RRI")
+	log.Println("Listing for requests at http://0.0.0.0:8000/TEMP")
+
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
