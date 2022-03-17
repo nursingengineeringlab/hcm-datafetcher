@@ -55,12 +55,11 @@ func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint
 	return s
 }
 
-func dataQuery(datatype string, deviceID string, endTime int64) []redistimeseries.DataPoint {
-	//var hour24 int64 = 86400000
+func dataQuery(datatype string, deviceID string, endTime int64, count int64) []redistimeseries.DataPoint {
 	var ecgOptions = redistimeseries.RangeOptions{
 		AggType:    "",
 		TimeBucket: -1,
-		Count:      5,
+		Count:      count,
 	}
 	var dataPoints []redistimeseries.DataPoint
 	if datatype == "ECG" {
@@ -73,27 +72,31 @@ func dataQuery(datatype string, deviceID string, endTime int64) []redistimeserie
 }
 
 func corsHeaderSet(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	//FIXME: CORS allow all is not secure enough
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseQueryURL(req *http.Request) (string, int64) {
+func parseQueryURL(req *http.Request) (string, int64, int64) {
 	deviceID := ""
-	var endTime int64
+	var endTime, count int64
+	count = 100
 	for k, v := range req.URL.Query() {
 		if k == "deviceId" {
 			deviceID = v[0]
 			continue
-		}
-		if k == "endTime" {
+		} else if k == "endTime" {
 			endTime, _ = strconv.ParseInt(v[0], 10, 64)
+			continue
+		} else if k == "count" {
+			count, _ = strconv.ParseInt(v[0], 10, 64)
 			continue
 		}
 	}
-	return deviceID, endTime
+	return deviceID, endTime, count
 }
 
 func writeBackJsonPayload(w http.ResponseWriter, data []redistimeseries.DataPoint) {
@@ -110,21 +113,21 @@ func writeBackJsonPayload(w http.ResponseWriter, data []redistimeseries.DataPoin
 }
 
 var tempHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
-	deviceID, endTime := parseQueryURL(req)
+	deviceID, endTime, count := parseQueryURL(req)
 
 	corsHeaderSet(w)
 
-	data := dataQuery("TEMP", deviceID, endTime)
+	data := dataQuery("TEMP", deviceID, endTime, count)
 
 	writeBackJsonPayload(w, data)
 }
 
 var ecgHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
-	deviceID, endTime := parseQueryURL(req)
+	deviceID, endTime, count := parseQueryURL(req)
 
 	corsHeaderSet(w)
 
-	data := dataQuery("ECG", deviceID, endTime)
+	data := dataQuery("ECG", deviceID, endTime, count)
 
 	writeBackJsonPayload(w, data)
 }
