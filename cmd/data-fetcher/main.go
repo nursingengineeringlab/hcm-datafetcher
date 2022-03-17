@@ -175,5 +175,5 @@ func main() {
 	log.Println("Listing for requests at http://0.0.0.0:8000/RRI")
 	log.Println("Listing for requests at http://0.0.0.0:8000/TEMP")
 
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(":8888", nil))
 }
