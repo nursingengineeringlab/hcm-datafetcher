@@ -56,16 +56,16 @@ func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint
 }
 
 func dataQuery(datatype string, deviceID string, endTime int64, startTime int64) []redistimeseries.DataPoint {
-	// var ecgOptions = redistimeseries.RangeOptions{
-	// 	AggType:    "",
-	// 	TimeBucket: -1,
-	// 	Count:      count,
-	// }
+	var customOptions = redistimeseries.RangeOptions{
+		AggType:    "",
+		TimeBucket: -1,
+		Count:      -1,
+	}
 	var dataPoints []redistimeseries.DataPoint
 	if datatype == "RRI" {
-		dataPoints, _ = redisClient.RangeWithOptions(deviceID, startTime, endTime, redistimeseries.DefaultRangeOptions)
+		dataPoints, _ = redisClient.RangeWithOptions(deviceID, startTime, endTime, customOptions)
 	} else {
-		dataPoints, _ = redisClient.RangeWithOptions(deviceID+"_temp", startTime, endTime, redistimeseries.DefaultRangeOptions)
+		dataPoints, _ = redisClient.RangeWithOptions(deviceID+"_temp", startTime, endTime, customOptions)
 	}
 
 	return dataPoints
