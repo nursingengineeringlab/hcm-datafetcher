@@ -101,14 +101,7 @@ func parseQueryURL(req *http.Request) (string, int64, int64) {
 
 func writeBackJsonPayload(w http.ResponseWriter, data []redistimeseries.DataPoint) {
 	js := JsonData{}
-	counter := 1
-	for _, v := range data {
-		js.dp = append(js.dp, v)
-		if counter == 500 {
-			break
-		}
-		counter++
-	}
+	js.dp = append(js.dp, data...)
 	json.NewEncoder(w).Encode(js.dp)
 }
 
