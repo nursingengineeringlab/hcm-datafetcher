@@ -63,12 +63,12 @@ func dataQuery(datatype string, deviceID string, endTime int64, startTime int64)
 	// }
 	var dataPoints []redistimeseries.DataPoint
 	if datatype == "RRI" {
-		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID, startTime, endTime, redistimeseries.DefaultRangeOptions)
+		dataPoints, _ = redisClient.RangeWithOptions(deviceID, startTime, endTime, redistimeseries.DefaultRangeOptions)
 	} else {
-		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID+"_temp", startTime, endTime, redistimeseries.DefaultRangeOptions)
+		dataPoints, _ = redisClient.RangeWithOptions(deviceID+"_temp", startTime, endTime, redistimeseries.DefaultRangeOptions)
 	}
 
-	return reverseDataPoint(dataPoints)
+	return dataPoints
 }
 
 func corsHeaderSet(w http.ResponseWriter) {
