@@ -41,8 +41,7 @@ func dataInsert(dataType pb.ECGPacket_DataType, deviceID string, dataPoint float
 			fmt.Println("Error:", err)
 		}
 	}
-
-	fmt.Println("Insert data successfully.")
+	log.Println("Insert data successfully: ", deviceID, timestamp, dataPoint)
 }
 
 type JsonData struct {
@@ -138,7 +137,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	if err := proto.Unmarshal(msg.Payload(), packet); err != nil {
 		log.Fatalln("Failed to parse address book:", err)
 	}
-
+	log.Println(">>> Seq is: ", packet.SequenceId)
 	dataInsert(packet.DataType, packet.DeviceId, float64(packet.Value), packet.Time)
 }
 
@@ -147,7 +146,7 @@ func main() {
 
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
-	opts := mqtt.NewClientOptions().AddBroker("tcp://127.0.0.1:1883").SetClientID("emqx_data_fetcher")
+	opts := mqtt.NewClientOptions().AddBroker("tcp://127.0.0.1:1883").SetClientID("hcm_datafetcher")
 
 	opts.SetKeepAlive(60 * time.Second)
 	// Set the message callback handler
