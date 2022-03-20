@@ -57,16 +57,16 @@ func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint
 }
 
 func dataQuery(datatype string, deviceID string, endTime int64, startTime int64) []redistimeseries.DataPoint {
-	var ecgOptions = redistimeseries.RangeOptions{
-		AggType:    "",
-		TimeBucket: -1,
-		// Count:      count,
-	}
+	// var ecgOptions = redistimeseries.RangeOptions{
+	// 	AggType:    "",
+	// 	TimeBucket: -1,
+	// 	Count:      count,
+	// }
 	var dataPoints []redistimeseries.DataPoint
-	if datatype == "ECG" {
-		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID, startTime, endTime, ecgOptions)
+	if datatype == "RRI" {
+		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID, startTime, endTime, redistimeseries.DefaultRangeOptions)
 	} else {
-		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID+"_temp", startTime, endTime, ecgOptions)
+		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID+"_temp", startTime, endTime, redistimeseries.DefaultRangeOptions)
 	}
 
 	return reverseDataPoint(dataPoints)
@@ -128,7 +128,7 @@ var ecgHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
 
 	corsHeaderSet(w)
 
-	data := dataQuery("ECG", deviceID, endTime, startTime)
+	data := dataQuery("RRI", deviceID, endTime, startTime)
 
 	writeBackJsonPayload(w, data)
 }
