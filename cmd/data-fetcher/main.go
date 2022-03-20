@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 
 	redistimeseries "github.com/RedisTimeSeries/redistimeseries-go"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -55,17 +56,17 @@ func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint
 	return s
 }
 
-func dataQuery(datatype string, deviceID string, endTime int64, count int64) []redistimeseries.DataPoint {
+func dataQuery(datatype string, deviceID string, endTime int64, startTime int64) []redistimeseries.DataPoint {
 	var ecgOptions = redistimeseries.RangeOptions{
 		AggType:    "",
 		TimeBucket: -1,
-		Count:      count,
+		// Count:      count,
 	}
 	var dataPoints []redistimeseries.DataPoint
 	if datatype == "ECG" {
-		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID, 0, endTime, ecgOptions)
+		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID, startTime, endTime, ecgOptions)
 	} else {
-		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID+"_temp", 0, endTime, ecgOptions)
+		dataPoints, _ = redisClient.ReverseRangeWithOptions(deviceID+"_temp", startTime, endTime, ecgOptions)
 	}
 
 	return reverseDataPoint(dataPoints)
@@ -82,21 +83,21 @@ func corsHeaderSet(w http.ResponseWriter) {
 
 func parseQueryURL(req *http.Request) (string, int64, int64) {
 	deviceID := ""
-	var endTime, count int64
-	count = 100
+	var endTime, startTime int64
+	// count = 100
 	for k, v := range req.URL.Query() {
 		if k == "deviceId" {
 			deviceID = v[0]
-			continue
 		} else if k == "endTime" {
 			endTime, _ = strconv.ParseInt(v[0], 10, 64)
-			continue
 		} else if k == "count" {
-			count, _ = strconv.ParseInt(v[0], 10, 64)
 			continue
+			// count, _ = strconv.ParseInt(v[0], 10, 64)
+		} else if k == "startTime" {
+			startTime, _ = strconv.ParseInt(v[0], 10, 64)
 		}
 	}
-	return deviceID, endTime, count
+	return deviceID, endTime, startTime
 }
 
 func writeBackJsonPayload(w http.ResponseWriter, data []redistimeseries.DataPoint) {
@@ -113,21 +114,21 @@ func writeBackJsonPayload(w http.ResponseWriter, data []redistimeseries.DataPoin
 }
 
 var tempHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
-	deviceID, endTime, count := parseQueryURL(req)
+	deviceID, endTime, startTime := parseQueryURL(req)
 
 	corsHeaderSet(w)
 
-	data := dataQuery("TEMP", deviceID, endTime, count)
+	data := dataQuery("TEMP", deviceID, endTime, startTime)
 
 	writeBackJsonPayload(w, data)
 }
 
 var ecgHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
-	deviceID, endTime, count := parseQueryURL(req)
+	deviceID, endTime, startTime := parseQueryURL(req)
 
 	corsHeaderSet(w)
 
-	data := dataQuery("ECG", deviceID, endTime, count)
+	data := dataQuery("ECG", deviceID, endTime, startTime)
 
 	writeBackJsonPayload(w, data)
 }
@@ -146,7 +147,7 @@ func main() {
 
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
-	opts := mqtt.NewClientOptions().AddBroker("tcp://172.24.41.85:1883").SetClientID("emqx_data_fetcher")
+	opts := mqtt.NewClientOptions().AddBroker("tcp://127.0.0.1:1883").SetClientID("emqx_data_fetcher")
 
 	opts.SetKeepAlive(60 * time.Second)
 	// Set the message callback handler
@@ -165,7 +166,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	redisClient = redistimeseries.NewClient("172.24.41.85:6379", "nohelp", nil)
+	redisClient = redistimeseries.NewClient("127.0.0.1:6379", "nohelp", nil)
 
 	// http://0.0.0.0:8888/ecg?deviceId=ED5A782825AB&endTime=1646945822002
 	http.HandleFunc("/RRI", ecgHttpQueryHandler)
