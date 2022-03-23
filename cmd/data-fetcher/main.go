@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-
 	redistimeseries "github.com/RedisTimeSeries/redistimeseries-go"
+	arg "github.com/alexflint/go-arg"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/golang/protobuf/proto"
 	pb "github.com/shiywang/hcm-datafetcher/proto-gen/github.com/shiywang/hcm-datafetcher"
 )
 
@@ -136,10 +136,17 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 
 func main() {
 	// Hello world, the web server
+	var args struct {
+		Mqtt  string `default:"tcp://127.0.0.1:1883"`
+		Redis string `default:"127.0.0.1:6379"`
+	}
+
+	arg.MustParse(&args)
+	fmt.Println(args.Mqtt, args.Redis)
 
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
-	opts := mqtt.NewClientOptions().AddBroker("tcp://127.0.0.1:1883").SetClientID("hcm_datafetcher")
+	opts := mqtt.NewClientOptions().AddBroker(args.Mqtt).SetClientID("hcm_datafetcher")
 
 	opts.SetKeepAlive(60 * time.Second)
 	// Set the message callback handler
@@ -158,7 +165,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	redisClient = redistimeseries.NewClient("127.0.0.1:6379", "nohelp", nil)
+	redisClient = redistimeseries.NewClient(args.Redis, "nohelp", nil)
 
 	// http://0.0.0.0:8888/ecg?deviceId=ED5A782825AB&endTime=1646945822002
 	http.HandleFunc("/RRI", ecgHttpQueryHandler)
