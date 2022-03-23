@@ -20,4 +20,4 @@ COPY --from=builder /app/data-fetcher .
 # Expose port
 EXPOSE 8888
 # Exec built binary
-CMD ./data-fetcher
+ENTRYPOINT [ "./data-fetcher" ] 
