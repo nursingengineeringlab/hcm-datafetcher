@@ -172,8 +172,8 @@ func main() {
 
 	http.HandleFunc("/TEMP", tempHttpQueryHandler)
 
-	log.Println("Listing for requests at http://0.0.0.0:8000/RRI")
-	log.Println("Listing for requests at http://0.0.0.0:8000/TEMP")
+	log.Println("Listing for requests at https://0.0.0.0:8000/RRI")
+	log.Println("Listing for requests at https://0.0.0.0:8000/TEMP")
 
-	log.Fatal(http.ListenAndServe(":8888", nil))
+	log.Fatal(http.ListenAndServeTLS(":8888", "api-tls.crt", "api-tls.key", nil))
 }

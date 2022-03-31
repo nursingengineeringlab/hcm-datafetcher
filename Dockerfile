@@ -17,6 +17,7 @@ FROM alpine:3.14 as production
 # RUN apk add --no-cache ca-certificates
 # Copy built binary from builder
 COPY --from=builder /app/data-fetcher .
+COPY --from=builder /app/secret/* .
 # Expose port
 EXPOSE 8888
 # Exec built binary
