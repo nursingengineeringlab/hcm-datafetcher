@@ -15,4 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag nelab/hcm-datafetcher:latest
+      run: |
+        echo "${{ secrets.DOCKER_PASSWORD }}" |docker login -u "nelab" --password-stdin
+        docker build . --file Dockerfile --tag nelab/hcm-datafetcher:latest
+        docker push nelab/hcm-datafetcher:latest
