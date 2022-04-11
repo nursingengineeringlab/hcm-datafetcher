@@ -17,8 +17,8 @@ FROM alpine:3.14 as production
 # RUN apk add --no-cache ca-certificates
 # Copy built binary from builder
 COPY --from=builder /app/data-fetcher .
-COPY --from=builder /app/secret/api-tls.crt .
-COPY --from=builder /app/secret/api-tls.crt .
+COPY --from=builder /app/secret/test.crt .
+COPY --from=builder /app/secret/test.crt .
 
 # Expose port
 EXPOSE 8888

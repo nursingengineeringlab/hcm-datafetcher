@@ -175,5 +175,5 @@ func main() {
 	log.Println("Listing for requests at https://0.0.0.0:8000/RRI")
 	log.Println("Listing for requests at https://0.0.0.0:8000/TEMP")
 
-	log.Fatal(http.ListenAndServeTLS(":8888", "api-tls.crt", "api-tls.key", nil))
+	log.Fatal(http.ListenAndServeTLS(":8888", "test.crt", "test.key", nil))
 }
