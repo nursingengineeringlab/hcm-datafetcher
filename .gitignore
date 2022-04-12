@@ -17,3 +17,5 @@
 .idea/
 
 cmd/data-fetcher/data-fetcher
+
+data-fetcher
