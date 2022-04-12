@@ -41,7 +41,7 @@ func dataInsert(dataType pb.ECGPacket_DataType, deviceID string, dataPoint float
 			fmt.Println("Error:", err)
 		}
 	}
-	// log.Println("Insert data successfully: ", deviceID, timestamp, dataPoint)
+	log.Println("Insert data successfully: ", deviceID, timestamp, dataPoint)
 }
 
 type JsonData struct {
@@ -116,6 +116,7 @@ var tempHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
 }
 
 var ecgHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("ini..............")
 	deviceID, endTime, startTime := parseQueryURL(req)
 
 	corsHeaderSet(w)
@@ -130,7 +131,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	if err := proto.Unmarshal(msg.Payload(), packet); err != nil {
 		log.Fatalln("Failed to parse address book:", err)
 	}
-	// log.Println(">>> Seq is: ", packet.SequenceId)
+	log.Println(">>> Seq is: ", packet.SequenceId)
 	dataInsert(packet.DataType, packet.DeviceId, float64(packet.Value), packet.Time)
 }
 
@@ -172,8 +173,8 @@ func main() {
 
 	http.HandleFunc("/TEMP", tempHttpQueryHandler)
 
-	log.Println("Listing for requests at https://0.0.0.0:8000/RRI")
-	log.Println("Listing for requests at https://0.0.0.0:8000/TEMP")
+	log.Println("Listing for requests at http://0.0.0.0:8888/RRI")
+	log.Println("Listing for requests at http://0.0.0.0:8888/TEMP")
 
-	log.Fatal(http.ListenAndServeTLS(":8888", "test.crt", "test.key", nil))
+	log.Fatal(http.ListenAndServe(":8888"))
 }
