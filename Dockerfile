@@ -20,7 +20,7 @@ FROM alpine:3.14 as production
 # Copy built binary from builder
 COPY --from=builder /app/data-fetcher .
 COPY --from=builder /app/test.crt .
-COPY --from=builder /app/test.crt .
+COPY --from=builder /app/test.key .
 
 # Expose port
 EXPOSE 8888
