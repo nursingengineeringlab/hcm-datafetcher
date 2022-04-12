@@ -41,7 +41,7 @@ func dataInsert(dataType pb.ECGPacket_DataType, deviceID string, dataPoint float
 			fmt.Println("Error:", err)
 		}
 	}
-	log.Println("Insert data successfully: ", deviceID, timestamp, dataPoint)
+	// log.Println("Insert data successfully: ", deviceID, timestamp, dataPoint)
 }
 
 type JsonData struct {
@@ -130,7 +130,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	if err := proto.Unmarshal(msg.Payload(), packet); err != nil {
 		log.Fatalln("Failed to parse address book:", err)
 	}
-	log.Println(">>> Seq is: ", packet.SequenceId)
+	// log.Println(">>> Seq is: ", packet.SequenceId)
 	dataInsert(packet.DataType, packet.DeviceId, float64(packet.Value), packet.Time)
 }
 
