@@ -147,7 +147,7 @@ func main() {
 	arg.MustParse(&args)
 	fmt.Println(args.Mqtt, args.Redis)
 
-	mqtt.DEBUG = log.New(os.Stdout, "", 0)
+	// mqtt.DEBUG = log.New(os.Stdout, "", 0)
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
 	opts := mqtt.NewClientOptions().AddBroker(args.Mqtt).SetClientID("hcm_datafetcher")
 
@@ -175,8 +175,8 @@ func main() {
 
 	http.HandleFunc("/TEMP", tempHttpQueryHandler)
 
-	log.Println("Listing for requests at https://0.0.0.0:8000/RRI")
-	log.Println("Listing for requests at https://0.0.0.0:8000/TEMP")
+	log.Println("haahaha Listing for requests at https://0.0.0.0:8000/RRI")
+	log.Println("hahahaha Listing for requests at https://0.0.0.0:8000/TEMP")
 
-	log.Fatal(http.ListenAndServeTLS(":8888", "test.crt", "test.key", nil))
+	log.Fatal(http.ListenAndServe(":8888", nil))
 }

@@ -9,8 +9,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 # Copy app files
 COPY . .
-COPY secret/test.crt .
-COPY secret/test.key .
+
 # Build app
 RUN  go build ./cmd/data-fetcher
 
@@ -19,8 +18,6 @@ FROM alpine:3.14 as production
 # RUN apk add --no-cache ca-certificates
 # Copy built binary from builder
 COPY --from=builder /app/data-fetcher .
-COPY --from=builder /app/test.crt .
-COPY --from=builder /app/test.key .
 
 # Expose port
 EXPOSE 8888
