@@ -117,12 +117,15 @@ var tempHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
 
 var ecgHttpQueryHandler = func(w http.ResponseWriter, req *http.Request) {
 	deviceID, endTime, startTime := parseQueryURL(req)
+	log.Println(">>>>>>>>>>>>>>>>>>>> HTTP reqeuest start", deviceID)
 
 	corsHeaderSet(w)
 
 	data := dataQuery("RRI", deviceID, endTime, startTime)
 
 	writeBackJsonPayload(w, data)
+	log.Println(">>>>>>>>>>>>>>>>>>>> HTTP reqeuest end", deviceID)
+	
 }
 
 var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
