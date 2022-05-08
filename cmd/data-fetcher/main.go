@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	redistimeseries "github.com/RedisTimeSeries/redistimeseries-go"
@@ -16,27 +17,45 @@ import (
 	pb "github.com/shiywang/hcm-datafetcher/proto-gen/github.com/shiywang/hcm-datafetcher"
 )
 
-var redisClient *redistimeseries.Client
+type RedisClient struct {
+	redisClient *redistimeseries.Client
+	once        sync.Once
+}
+
+func (r *RedisClient) GetClient() *redistimeseries.Client {
+	return r.redisClient
+}
+
+var conn *RedisClient
+
+func NewRedisClient(ipAddress string) *RedisClient {
+	//singleton redis client instantiation method
+	conn.once.Do(func() {
+		conn.redisClient = redistimeseries.NewClient(ipAddress, "nohelp", nil)
+	})
+	return conn
+}
 
 // https://github.com/RedisTimeSeries/RedisTimeSeries
 // https://github.com/RedisTimeSeries/redistimeseries-go/
 func dataInsert(dataType pb.ECGPacket_DataType, deviceID string, dataPoint float64, timestamp uint64) {
-	_, haveIt := redisClient.Info(deviceID)
+	rc := conn.GetClient()
+	_, haveIt := rc.Info(deviceID)
 	if haveIt != nil {
-		redisClient.CreateKeyWithOptions(deviceID, redistimeseries.DefaultCreateOptions)
-		redisClient.CreateKeyWithOptions(deviceID+"_avg", redistimeseries.DefaultCreateOptions)
-		redisClient.CreateKeyWithOptions(deviceID+"_temp", redistimeseries.DefaultCreateOptions)
-		redisClient.CreateRule(deviceID, redistimeseries.AvgAggregation, 60, deviceID+"_avg")
+		rc.CreateKeyWithOptions(deviceID, redistimeseries.DefaultCreateOptions)
+		rc.CreateKeyWithOptions(deviceID+"_avg", redistimeseries.DefaultCreateOptions)
+		rc.CreateKeyWithOptions(deviceID+"_temp", redistimeseries.DefaultCreateOptions)
+		rc.CreateRule(deviceID, redistimeseries.AvgAggregation, 60, deviceID+"_avg")
 	}
 
 	if dataType == pb.ECGPacket_RRI {
-		_, err := redisClient.Add(deviceID, int64(timestamp), dataPoint)
+		_, err := rc.Add(deviceID, int64(timestamp), dataPoint)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
 	} else {
 		//right now the default alternative is temp
-		_, err := redisClient.Add(deviceID+"_temp", int64(timestamp), dataPoint)
+		_, err := rc.Add(deviceID+"_temp", int64(timestamp), dataPoint)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
@@ -48,14 +67,15 @@ type JsonData struct {
 	dp []redistimeseries.DataPoint
 }
 
-func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
-	return s
-}
+// func reverseDataPoint(s []redistimeseries.DataPoint) []redistimeseries.DataPoint {
+// 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+// 		s[i], s[j] = s[j], s[i]
+// 	}
+// 	return s
+// }
 
 func dataQuery(datatype string, deviceID string, endTime int64, startTime int64) []redistimeseries.DataPoint {
+	rc := conn.GetClient()
 	var customOptions = redistimeseries.RangeOptions{
 		AggType:    "",
 		TimeBucket: -1,
@@ -63,9 +83,9 @@ func dataQuery(datatype string, deviceID string, endTime int64, startTime int64)
 	}
 	var dataPoints []redistimeseries.DataPoint
 	if datatype == "RRI" {
-		dataPoints, _ = redisClient.RangeWithOptions(deviceID, startTime, endTime, customOptions)
+		dataPoints, _ = rc.RangeWithOptions(deviceID, startTime, endTime, customOptions)
 	} else {
-		dataPoints, _ = redisClient.RangeWithOptions(deviceID+"_temp", startTime, endTime, customOptions)
+		dataPoints, _ = rc.RangeWithOptions(deviceID+"_temp", startTime, endTime, customOptions)
 	}
 
 	return dataPoints
@@ -166,7 +186,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	redisClient = redistimeseries.NewClient(args.Redis, "nohelp", nil)
+	conn = NewRedisClient(args.Redis)
 
 	// http://0.0.0.0:8888/ecg?deviceId=ED5A782825AB&endTime=1646945822002
 	http.HandleFunc("/RRI", ecgHttpQueryHandler)
