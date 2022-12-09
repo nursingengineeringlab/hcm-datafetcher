@@ -1,0 +1,10 @@
+[Unit]
+Description=HCM Datafetcher
+After=redis-server.service network-online.target
+
+[Service]
+WorkingDirectory=/opt/hcm-datafetcher
+ExecStart=/opt/hcm-datafetcher/data-fetcher
+
+[Install]
+WantedBy=multi-user.target
